@@ -1,0 +1,55 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Auto Hidden Iframe Logger (Delayed)</title>
+  <style>
+    #myIframe {
+      width: 1px;
+      height: 1px;
+      border: none;
+      visibility: hidden;
+    }
+  </style>
+</head>
+<body>
+  <iframe id="myIframe" src="your-page.html"></iframe>
+
+  <script>
+    function isVisible(el) {
+      const s = el.ownerDocument.defaultView.getComputedStyle(el);
+      return s.display !== "none" && s.visibility !== "hidden" && s.opacity !== "0" && el.offsetParent !== null;
+    }
+
+    function getVisibleText(node) {
+      let result = [];
+      if (node.nodeType === Node.TEXT_NODE) {
+        let text = node.textContent.trim();
+        if (text) result.push(text);
+      } else if (node.nodeType === Node.ELEMENT_NODE && isVisible(node)) {
+        for (let child of node.childNodes) {
+          result.push(...getVisibleText(child));
+        }
+      }
+      return result;
+    }
+
+    document.getElementById("myIframe").addEventListener("load", () => {
+      setTimeout(() => {
+        try {
+          const iframe = document.getElementById("myIframe");
+          const doc = iframe.contentDocument || iframe.contentWindow.document;
+          const text = getVisibleText(doc.body).join(" ");
+
+          const logs = JSON.parse(localStorage.getItem("iframeLogs") || "[]");
+          logs.push({ time: new Date().toISOString(), text });
+          localStorage.setItem("iframeLogs", JSON.stringify(logs));
+
+          console.log("✅ Text logged after 1 second:", text);
+        } catch (e) {
+          console.error("❌ Error accessing iframe:", e);
+        }
+      }, 2000); // 1-second delay
+    });
+  </script>
+</body>
+</html>
